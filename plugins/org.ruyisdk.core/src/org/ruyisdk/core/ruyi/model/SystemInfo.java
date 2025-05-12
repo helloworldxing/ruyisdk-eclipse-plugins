@@ -34,4 +34,18 @@ public class SystemInfo {
             return Architecture.UNKNOWN;
         }
     }
+    
+    public static String getPlatformKey() {
+        String arch = System.getProperty("os.arch").toLowerCase();
+        
+        if (arch.contains("x86_64") || arch.contains("amd64")) {
+            return "linux/x86_64";
+        } else if (arch.contains("aarch64") || arch.contains("arm64")) {
+            return "linux/aarch64";
+        } else if (arch.contains("riscv")) {
+            return "linux/riscv64";
+        } else {
+            return "linux/" + arch;
+        }
+    }
 }

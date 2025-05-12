@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+	<extension point="org.eclipse.ui.preferencePages">
+		<!-- 第一级：RuyiSDK 分类:在 org.ruyisdk.core 中定义-->
+		<!-- 第二级：Ruyi Config -->
+		<page
+			id="org.ruyisdk.preferences.config"
+			name="Ruyi Config"
+			class="org.ruyisdk.ruyi.preferences.RuyiConfigPreferencePage"
+			category="org.ruyisdk.preferences.root">
+		</page>
+	</extension>
+
+	<!-- 1. 启动时自动检测（必须） -->
+	<extension point="org.eclipse.ui.startup">
+		<startup class="org.ruyisdk.ruyi.core.RuyiStartup" />
+	</extension>
+
+	<!-- 2. 命令定义（必须） -->
+	<extension point="org.eclipse.ui.commands">
+		<command
+			id="org.ruyisdk.ruyi.commands.checkInstallation"
+			name="Check Ruyi Installation"
+			description="Check the current Ruyi installation status">
+		</command>
+	</extension>
+
+	<!-- 3. 命令处理器（必须） -->
+	<extension point="org.eclipse.ui.handlers">
+		<handler
+			class="org.ruyisdk.ruyi.handlers.CheckInstallationHandler"
+			commandId="org.ruyisdk.ruyi.commands.checkInstallation">
+		</handler>
+	</extension>
+
+	<!-- 4. 主菜单配置（必须） -->
+	<extension point="org.eclipse.ui.menus">
+		<menuContribution
+			locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+			<menu id="org.ruyisdk.ruyi.menus.main" label="RuyiSDK">
+				<command
+					commandId="org.ruyisdk.ruyi.commands.checkInstallation"
+					label="Ruyi Installation"
+					tooltip="Verify Ruyi installation">
+				</command>
+			</menu>
+		</menuContribution>
+	</extension>
+
+</plugin>
