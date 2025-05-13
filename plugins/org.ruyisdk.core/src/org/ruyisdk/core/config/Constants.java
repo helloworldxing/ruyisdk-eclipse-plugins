@@ -43,4 +43,6 @@ public final class Constants {
 		public static String INSTALL_PATH = "~/.local/bin"; //ruyi install path;"/usr/local/bin/" 
 		public static final String BACKUP_PREFIX = "ruyi.backup.";
 	}
+	
+
 }

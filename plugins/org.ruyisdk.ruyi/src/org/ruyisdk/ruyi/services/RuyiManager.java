@@ -18,8 +18,8 @@ public class RuyiManager {
     
     public static boolean isRuyiInstalled() {
         try {
-//            Process process = new ProcessBuilder(RuyiFileUtils.getInstallPath()+"/ruyi", "-V").start();
-        	 Process process = Runtime.getRuntime().exec(RuyiFileUtils.getInstallPath()+"/ruyi -V");
+            Process process = new ProcessBuilder(RuyiFileUtils.getInstallPath()+"/ruyi", "-V").start();
+//        	 Process process = Runtime.getRuntime().exec(RuyiFileUtils.getInstallPath()+"/ruyi -V");
             return process.waitFor() == 0;
         } catch (IOException | InterruptedException e) {
         	e.printStackTrace();

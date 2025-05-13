@@ -21,11 +21,13 @@ import org.eclipse.swt.widgets.*;
 import org.ruyisdk.core.ruyi.model.RepoConfig;
 import org.ruyisdk.core.ruyi.model.RuyiVersion;
 import org.ruyisdk.ruyi.Activator;
+import org.ruyisdk.ruyi.preferences.AutomaticCheckPreference;
 import org.ruyisdk.ruyi.preferences.RepoConfigPreference;
 import org.ruyisdk.ruyi.preferences.RuyiInstallPathPreference;
 import org.ruyisdk.ruyi.preferences.TelemetryPreference;
 import org.ruyisdk.ruyi.services.RuyiInstallManager;
 import org.ruyisdk.ruyi.services.RuyiProperties;
+import org.ruyisdk.ruyi.services.RuyiProperties.TelemetryStatus;
 import org.ruyisdk.ruyi.util.RuyiLogger;
 import org.ruyisdk.ruyi.util.StatusUtil;
 
@@ -59,11 +61,6 @@ public class RuyiInstallWizard extends Wizard {
     
     @Override
     public void addPages() {
-//        addPage(new WelcomePage(mode));
-//        if (mode == Mode.UPGRADE) {
-//            addPage(new VersionComparisonPage(currentVersion, newVersion));
-//        }
-        
         addPage(new CheckResultPage(mode));
         addPage(new PreparePage(mode));
         addPage(new ConfigurationPage());
@@ -89,8 +86,7 @@ public class RuyiInstallWizard extends Wizard {
     private class CheckResultPage extends WizardPage {
         private final Mode mode;
         private Button dontCheckAgainCheckbox;
-//        private Button proceedButton;
-//        private Button laterButton;
+//        private AutomaticCheckPreference automaticCheckPref;
 
         public CheckResultPage(Mode mode) {
             super("checkResultPage");
@@ -153,48 +149,25 @@ public class RuyiInstallWizard extends Wizard {
             });
 
             // 不再检测选项
+//            automaticCheckPref = new AutomaticCheckPreference(container);
+//            automaticCheckPref.createSection();
             dontCheckAgainCheckbox = new Button(container, SWT.CHECK);
             dontCheckAgainCheckbox.setText("Don't check and prompt again");
             dontCheckAgainCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
             dontCheckAgainCheckbox.addListener(SWT.Selection, e -> setAutomaticDetection());
-
-            // 按钮区域
-//            Composite buttonComposite = new Composite(container, SWT.NONE);
-//            buttonComposite.setLayoutData(new GridData(SWT.RIGHT, SWT.BOTTOM, true, true));
-//            buttonComposite.setLayout(new GridLayout(2, true));
-
-//            proceedButton = new Button(buttonComposite, SWT.PUSH);
-//            proceedButton.setText("Proceed Now");
-//            proceedButton.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false));
-//            proceedButton.addListener(SWT.Selection, e -> onProceed());
-//
-//            laterButton = new Button(buttonComposite, SWT.PUSH);
-//            laterButton.setText("Handle Later");
-//            laterButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
-//            laterButton.addListener(SWT.Selection, e -> onLater());
            
             setControl(container);
         }
 
-
-
         // 保存"不再提示"设置
         private void setAutomaticDetection() {
            try {
-				RuyiProperties.setAutomaticDetection(dontCheckAgainCheckbox.getSelection());
+				RuyiProperties.setAutomaticDetection(!dontCheckAgainCheckbox.getSelection());
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
         }
-        
-//        private void onProceed() {
-//            getContainer().showPage(getNextPage());
-//        }
-//
-//        private void onLater() {
-//            getContainer().getShell().close();
-//        }
     }
     
     private class PreparePage extends WizardPage {
@@ -273,8 +246,19 @@ public class RuyiInstallWizard extends Wizard {
             return repoPref.getSelectedRepos();
         }
 
-        public boolean isTelemetryEnabled() {
-            return telemetryPref.isTelemetryEnabled();
+        public TelemetryStatus getTelemetryStatus() {
+            return telemetryPref.getTelemetryStatus();
+        }
+        
+        public void saveConfig() {
+        	try {
+        		installPref.saveInstallPath();
+        		repoPref.saveRepoConfigs();
+        		telemetryPref.saveTelemetryConfigs();
+    		} catch (IOException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		}
         }
     }
 
@@ -300,6 +284,11 @@ public class RuyiInstallWizard extends Wizard {
             progressComp = new InstallProgressComposite(parent);
             setControl(progressComp);
         }
+        
+    	@Override
+    	public IWizardPage getPreviousPage() {
+    		return null;
+    	}
 
         @Override
         public void setVisible(boolean visible) {
@@ -311,10 +300,14 @@ public class RuyiInstallWizard extends Wizard {
 
         private void startInstallation() {
             ConfigurationPage configPage = (ConfigurationPage) getWizard().getPage("configurationPage");
+            configPage.saveConfig();
             
+//            installManager.setInstalledVersion(currentVersion.toString());
+//            installManager.setLatestVersion(newVersion.toString());
+
             installManager.setInstallPath(configPage.getInstallPath());
             installManager.setRepoUrls(configPage.getSelectedRepos());
-            installManager.setTelemetryEnabled(configPage.isTelemetryEnabled());
+            installManager.setTelemetryStatus(configPage.getTelemetryStatus());
 
             progressComp.appendLog("Starting " + 
                 (mode == Mode.INSTALL ? "installation" : "upgrade") + "...");
@@ -407,6 +400,11 @@ public class RuyiInstallWizard extends Wizard {
         public boolean isPageComplete() {
             return true; // 完成页始终可进入
         }
+        
+    	@Override
+    	public IWizardPage getPreviousPage() {
+    		return null;
+    	}
     }
 
     public interface InstallationListener {

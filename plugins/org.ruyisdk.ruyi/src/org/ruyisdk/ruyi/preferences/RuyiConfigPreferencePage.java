@@ -12,11 +12,13 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.ruyisdk.ruyi.Activator;
+import org.ruyisdk.ruyi.util.StatusUtil;
 
 public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 	private RuyiInstallPathPreference installPreference;
 	private RepoConfigPreference repoPreference;
 	private TelemetryPreference telemetryPreference;
+	private AutomaticCheckPreference automaticCheckPreference;
 
 	@Override
 	public void init(IWorkbench workbench) {
@@ -26,45 +28,6 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 //		noDefaultButton();
 	}
 
-//    @Override
-//    protected void createFieldEditors() {
-//        Composite parent = getFieldEditorParent();
-//        
-//        // 确保父容器使用GridLayout
-//        if (!(parent.getLayout() instanceof GridLayout)) {
-////            parent.setLayout(new GridLayout(1, false));
-//            parent.setLayout(new FillLayout(SWT.VERTICAL));
-//        }
-//        
-//        // 1. 安装路径配置
-//        addField(new DirectoryFieldEditor(
-//		            "RUYI_INSTALL_PATH", 
-//		            "Installation Directory:", 
-//		            getInstallPath(),
-//		            parent
-//        		)
-//        );
-//
-//        // 2. 仓库配置
-//        addField(new CustomCompositeFieldEditor("REPO_SECTION",parent) {
-//            @Override
-//            protected void createControl(Composite parent) {
-//                new RepoConfigPreferenceSection(parent).createSection();
-//            }
-//        });
-//
-//        // 3. 遥测配置
-//        addField(new CustomCompositeFieldEditor("TELEMETRY_SECTION",parent) {
-//            @Override
-//            protected void createControl(Composite parent) {
-//                new TelemetryPreferenceSection(parent).createSection();
-//            }
-//        });
-//        
-//        // 强制布局刷新
-//        parent.layout(true, true);
-//        printLayoutHierarchy(parent, 0);
-//    }
 
 	@Override
 	protected void createFieldEditors() {
@@ -77,7 +40,11 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 		content.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		content.setLayout(new GridLayout(1, false));
 //		content.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_GREEN));
-
+		
+		// 6. 开机自动检测
+		automaticCheckPreference = new AutomaticCheckPreference(content);
+		automaticCheckPreference.createSection();
+		
 		// 3. 手动创建安装路径编辑器
 //		createDirectoryEditor(content);
 		installPreference = new RuyiInstallPathPreference(content);
@@ -90,7 +57,7 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 		// 5. 遥测配置
 		telemetryPreference = new TelemetryPreference(content);
 		telemetryPreference.createSection();
-
+				
 		// 布局调试
 //		printControlHierarchy(content, 0);
 
@@ -113,6 +80,7 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 		super.performDefaults(); // 先调用父类默认处理
 
 		// UI
+		automaticCheckPreference.defaultedAutomaticDetectionState();
 		installPreference.defaultedInstallPath();
 		repoPreference.defaultedRepoState();
 		telemetryPreference.defaultedTelemetryState();
@@ -140,7 +108,7 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 
 		// 立即应用设置
 		applySettingsToRuntime();
-//        StatusUtil.showInfo("Settings applied successfully");
+        StatusUtil.showInfo("Settings applied successfully");
 		
 		// 用户保存配置后触发快速检查
 //	    CheckResult result = new QuickCheckJob().runCheck();
@@ -151,6 +119,7 @@ public class RuyiConfigPreferencePage extends FieldEditorPreferencePage implemen
 
 	private void applySettingsToRuntime() {
 		try {
+			automaticCheckPreference.setAutomaticDetection();
 			installPreference.saveInstallPath();
 			repoPreference.saveRepoConfigs();
 			telemetryPreference.saveTelemetryConfigs();
