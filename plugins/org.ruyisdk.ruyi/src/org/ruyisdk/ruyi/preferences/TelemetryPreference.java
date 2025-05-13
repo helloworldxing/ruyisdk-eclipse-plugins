@@ -14,10 +14,12 @@ import org.eclipse.swt.program.Program;
 import org.eclipse.swt.widgets.*;
 import org.ruyisdk.core.ruyi.model.RepoConfig;
 import org.ruyisdk.ruyi.services.RuyiProperties;
+import org.ruyisdk.ruyi.services.RuyiProperties.TelemetryStatus;
 
 public class TelemetryPreference {
 	private final Composite parent;
-	private Button telemetryCheckbox;
+//	private Button telemetryCheckbox;
+	private Combo telemetryCombo;
 
 	public TelemetryPreference(Composite parent) {
 		this.parent = parent;
@@ -34,10 +36,31 @@ public class TelemetryPreference {
 //		group.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
 		// checkbox
-		telemetryCheckbox = new Button(group, SWT.CHECK);
-		telemetryCheckbox.setText("Enable anonymous usage data collection");
-		telemetryCheckbox.setSelection(true);
-		telemetryCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+//		telemetryCheckbox = new Button(group, SWT.CHECK);
+//		telemetryCheckbox.setText("Enable anonymous usage data collection");
+//		telemetryCheckbox.setSelection(true);
+//		telemetryCheckbox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+		
+		// Create a container for label + combo in one row
+		Composite comboContainer = new Composite(group, SWT.NONE);
+		comboContainer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		comboContainer.setLayout(new GridLayout(2, false));
+		
+		// Label for the combo
+        Label label = new Label(comboContainer, SWT.NONE);
+        label.setText("Telemetry data collection:");
+        label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+
+        // Combo for telemetry status
+        telemetryCombo = new Combo(comboContainer, SWT.DROP_DOWN | SWT.READ_ONLY);
+        telemetryCombo.setItems(new String[] {
+            "Enabled: Send anonymous usage data",
+            "Local only: Analyze data locally only",
+            "Disabled: No data collection"
+        });
+        // Set default selection
+        telemetryCombo.select(initTelemetryStatus());
+        telemetryCombo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
 		// 创建一个Link控件来显示描述文本和链接
 		Link link = new Link(group, SWT.WRAP);
@@ -62,15 +85,49 @@ public class TelemetryPreference {
 
 	}
 
-	public boolean isTelemetryEnabled() {
-		return telemetryCheckbox.getSelection();
-	}
+//	public boolean isTelemetryEnabled() {
+//		return telemetryCheckbox.getSelection();
+//	}
+//
+//	public void defaultedTelemetryState() {
+//		telemetryCheckbox.setSelection(true);
+//	}
+//
+//	public void saveTelemetryConfigs() throws IOException {
+//		RuyiProperties.setTelemetryStatus(telemetryCheckbox.getSelection());
+//	}
+	 public TelemetryStatus getTelemetryStatus() {
+	        switch (telemetryCombo.getSelectionIndex()) {
+	            case 0: return TelemetryStatus.ON;
+	            case 1: return TelemetryStatus.LOCAL;
+	            case 2: return TelemetryStatus.OFF;
+	            default: return TelemetryStatus.ON;
+	        }
+	    }
 
-	public void defaultedTelemetryState() {
-		telemetryCheckbox.setSelection(true);
-	}
+	    public void setTelemetryStatus(TelemetryStatus status) {
+	        switch (status) {
+	            case ON: telemetryCombo.select(0); break;
+	            case LOCAL: telemetryCombo.select(1); break;
+	            case OFF: telemetryCombo.select(2); break;
+	        }
+	    }
 
-	public void saveTelemetryConfigs() throws IOException {
-		RuyiProperties.setTelemetryStatus(telemetryCheckbox.getSelection());
-	}
+	    public void defaultedTelemetryState() {
+	        telemetryCombo.select(0); // Default to ON
+	    }
+
+	    public void saveTelemetryConfigs() throws IOException {
+	        RuyiProperties.setTelemetryStatus(getTelemetryStatus());
+	    }
+	    
+	    public int initTelemetryStatus(){
+	        switch (RuyiProperties.getTelemetryStatus()) {
+	            case TelemetryStatus.ON: return 0;
+	            case TelemetryStatus.LOCAL: return 1;
+	            case TelemetryStatus.OFF: return 2;
+	            default: return 0;
+	        }
+	    }
+	    
 }

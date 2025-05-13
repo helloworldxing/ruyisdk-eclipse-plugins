@@ -15,7 +15,9 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 import org.ruyisdk.core.ruyi.model.RepoConfig;
 import org.ruyisdk.core.ruyi.model.RuyiReleaseInfo;
+import org.ruyisdk.core.ruyi.model.RuyiVersion;
 import org.ruyisdk.core.ruyi.model.SystemInfo;
+import org.ruyisdk.ruyi.services.RuyiProperties.TelemetryStatus;
 import org.ruyisdk.ruyi.ui.RuyiInstallWizard.InstallationListener;
 import org.ruyisdk.ruyi.util.PathUtils;
 import org.ruyisdk.ruyi.util.RuyiFileUtils;
@@ -30,22 +32,19 @@ public class RuyiInstallManager {
 	private String installPath; // UI界面用户自定义的path
 
 	// ruyi 下载相关参数
-	private String installedVersion; // 本地已安装ruyi版本
+//	private String installedVersion; // 本地已安装ruyi版本
 	private RuyiReleaseInfo latestRelease; // 接口获取的 ruyi Release信息，含版本和下载url
-	private String latestVersion;
+//	private String latestVersion;
 
 	// ruyi 配置相关参数
 	private RepoConfig[] repoUrls; // 存储库地址，支持多个
-	private String repositoryUrl;
-	private boolean telemetryEnabled;
+//	private String repositoryUrl;
+	private TelemetryStatus telemetryStatus;
 
 	public RuyiInstallManager(RuyiLogger logger) {
 		this.logger = logger;
 		this.installPath = DEFAULT_INSTALL_PATH.toString();
-//        this.installedVersion = 
-//        this.latestRelease = 
-		this.repositoryUrl = "";
-		this.telemetryEnabled = true;
+		this.telemetryStatus = TelemetryStatus.ON;
 	}
 
 	// ========== 安装管理方法 ==========
@@ -57,38 +56,39 @@ public class RuyiInstallManager {
 			// 阶段1: 准备安装 (10%)
 			subMonitor.subTask("Preparing installation");
 			prepareInstallation(listener);
-			subMonitor.worked(10);
+			subMonitor.split(10);
 
 			// 清理/备份旧文件
 
 			// 阶段2: 下载Ruyi (50%)
 			subMonitor.subTask("Downloading components");
-			downloadRuyi(subMonitor.newChild(60), listener);
-
-//            // 阶段3: 安装文件 (30%)
-//            subMonitor.subTask("Installing files");
-//            installFiles(subMonitor.newChild(30), listener);
-
+			downloadRuyi(subMonitor.split(50), listener);
+			subMonitor.split(50);
+			
 			// 阶段3: 完成安装 (10%)
 			subMonitor.subTask("Finalizing installation");
+//	         // 文件预处理
+//			listener.logMessage("Rename ruyi file ...");
+//          prepareExecutable(Paths.get(installPath, latestRelease.getFilename()), 
+//          		Paths.get(installPath,  "ruyi"),
+//          		listener);
+			
+			// 环境变量配置
 			listener.logMessage("Setting up environment...");
-//         // 3. 文件预处理
-//            prepareExecutable(Paths.get(installPath, latestRelease.getFilename()), 
-//            		Paths.get(installPath,  "ruyi"),
-//            		listener);
-
-			// 4. 环境变量配置
-//            addToPathIfNeeded(installPath, listener);
-			addToPathIfNeeded(DEFAULT_INSTALL_PATH.toString(), listener);
-			subMonitor.worked(90);
+			addToPathIfNeeded(installPath, listener);
+			subMonitor.split(10);
 			listener.logMessage("Ruyi " + getVersionFromPackage() + " installed successfully");
 
 			// 阶段3: 验证安装 (10%)
 			subMonitor.subTask("Validating installation");
 			validateInstallation(installPath, listener);
-			subMonitor.worked(100);
-
+			subMonitor.split(10);
 			listener.logMessage("Installation completed successfully");
+			
+			// 阶段4: 安装后设置 (10%)
+			subMonitor.subTask("Ruyi config");
+			ruyiConfig(installPath, listener);
+			subMonitor.split(20);
 		} catch (Exception e) {
 			listener.logMessage("Installation failed: " + e.getMessage());
 			throw e;
@@ -115,26 +115,6 @@ public class RuyiInstallManager {
 			listener.logMessage("Directory already exists.");
 		}
 		listener.progressChanged(5, "Directory ready");
-
-//        // 2. 检查磁盘剩余空间（假设至少需要 500MB 空间）
-//        listener.logMessage("Checking available disk space...");
-//        long requiredSpaceBytes = 500L * 1024 * 1024;  // 500M
-//        File diskPartition = new File(installPath);
-//        long freeSpaceBytes = diskPartition.getUsableSpace();
-//
-//        if (freeSpaceBytes < requiredSpaceBytes) {
-//            throw new Exception(String.format(
-//                "Insufficient disk space. Required: %.1f MB, Available: %.1f MB",
-//                requiredSpaceBytes / (1024L * 1024),
-//                freeSpaceBytes / (1024L * 1024)
-//            ));
-//        }
-//        listener.logMessage(String.format(
-//            "Disk space OK (Available: %.1f MB)", 
-//            freeSpaceBytes / (1024L * 1024)
-//        ));
-////        listener.logMessage("Disk space OK");
-//        listener.progressChanged(10, "Preparation complete");
 
 		// 2. 检查磁盘空间（使用 NIO API）
 		listener.logMessage("Checking available disk space...");
@@ -166,16 +146,18 @@ public class RuyiInstallManager {
 		listener.logMessage(msg);
 		listener.progressChanged(10, "准备完成");
 	}
-
+	
 	private void downloadRuyi(IProgressMonitor monitor, InstallationListener listener) throws Exception {
 		String archSuffix = SystemInfo.detectArchitecture().getSuffix();
 		latestRelease = RuyiAPI.getLatestRelease(archSuffix);
-//        String ruyiInstallPath = Paths.get(installPath, latestRelease.getFilename()).toString();
-		Path ruyiInstallPath = Paths.get(RuyiFileUtils.getDefaultInstallPath().toString(), "ruyi");
-		Path parent = ruyiInstallPath.getParent();
-		if (!Files.exists(parent)) {
-			Files.createDirectories(parent);
-		}
+		
+//		String ruyiInstallPath = Paths.get(installPath, latestRelease.getFilename()).toString();
+//		Path ruyiInstallPath = Paths.get(RuyiFileUtils.getInstallPath().toString(), "ruyi");
+		Path ruyiInstallPath = Paths.get(installPath, "ruyi");
+//		Path parent = ruyiInstallPath.getParent();
+//		if (!Files.exists(parent)) {
+//			Files.createDirectories(parent);
+//		}
 
 		// 定义下载源数组（按优先级排序）
 		String[] downloadSources = { latestRelease.getMirrorUrl(), // 优先尝试镜像地址
@@ -222,62 +204,6 @@ public class RuyiInstallManager {
 		throw new Exception(
 				String.format("所有下载尝试均失败。最后错误: %s", lastException != null ? lastException.getMessage() : "未知错误"),
 				lastException);
-	}
-
-	private void downloadRuyi1(IProgressMonitor monitor, InstallationListener listener) throws Exception {
-		String lastestVersion = "0.32.0";
-		String archSuffix = SystemInfo.detectArchitecture().getSuffix(); // "amd64"
-		String lastestFileName = "ruyi." + archSuffix;
-		String ruyiInstallPath = Paths.get(installPath, lastestFileName).toString();
-
-		Exception lastException = null; // 记录最后一次失败的原因
-
-		// 遍历所有 RepoConfig，按优先级顺序尝试下载
-		for (RepoConfig repoConfig : repoUrls) {
-			try {
-				String ruyiDownloadUrl = repoConfig.getUrl() + "/" + lastestVersion + "/" + lastestFileName;
-				listener.logMessage("Trying download from: " + ruyiDownloadUrl);
-
-				RuyiNetworkUtils.downloadFile(ruyiDownloadUrl, ruyiInstallPath, monitor, (transferred, total) -> {
-					int percent = (int) ((double) transferred / total * 100);
-					listener.progressChanged(10 + percent / 2, String.format("Downloading from %s (%d/%d KB)",
-							repoConfig.getName(), transferred / 1024, total / 1024));
-				});
-
-				// 下载成功，直接返回
-				listener.logMessage("Download succeeded from: " + repoConfig.getName());
-				return;
-
-			} catch (Exception e) {
-				// 记录失败原因，继续尝试下一个地址
-				lastException = e;
-				listener.logMessage("Download failed from " + repoConfig.getName() + ": " + e.getMessage());
-			}
-		}
-
-		// 所有地址均失败，抛出最后一次的异常
-		if (lastException != null) {
-			throw new Exception("All download attempts failed. Last error: " + lastException.getMessage(),
-					lastException);
-		} else {
-			throw new Exception("No valid download URLs configured.");
-		}
-	}
-
-	private void finalizeInstallation(InstallationListener listener) throws Exception {
-		listener.logMessage("Setting up environment...");
-//        // 环境配置逻辑...
-//        for (int i = 0; i < 10; i++) {
-//            if (monitor.isCanceled()) {
-//                throw new InterruptedException("Installation cancelled by user");
-//            }
-//            Thread.sleep(100);
-//            monitor.worked(1);
-//            listener.progressChanged(90 + i, "Finalizing...");
-//        }
-//        
-		this.installedVersion = getVersionFromPackage();
-		listener.logMessage("Ruyi " + installedVersion + " installed successfully");
 	}
 
 	private void prepareExecutable(Path source, Path target, InstallationListener listener) throws Exception {
@@ -385,25 +311,35 @@ public class RuyiInstallManager {
 
 	private void validateInstallation(String ruyiPath, InstallationListener listener) throws Exception {
 		listener.logMessage("Validating installation...");
-
+		
 		// 执行 ruyi -V 命令验证
-		ProcessBuilder pb = new ProcessBuilder(ruyiPath + "/ruyi", "-V");
-		pb.redirectErrorStream(true);
+		RuyiVersion version = RuyiCommand.getInstalledVersion(ruyiPath);
+		if (version == null) {
+			listener.logMessage("There are problems in the operation ruyi -V.");
+		} 
 
-		try {
-			Process process = pb.start();
-			int exitCode = process.waitFor();
-
-			if (exitCode != 0) {
-				String output = new String(process.getInputStream().readAllBytes());
-				throw new Exception("Validation failed. Output:\n" + output);
-			}
-		} catch (IOException | InterruptedException e) {
-			throw new Exception("Failed to validate installation", e);
-		}
-
-		listener.logMessage("Validation successful");
+		listener.logMessage("Ruyi "+version.toString()+" install successful.");
 	}
+	
+	// 安装后设置
+	private void ruyiConfig(String ruyiPath, InstallationListener listener) throws Exception {
+		listener.logMessage("Ruyi Config...");
+
+		// 1.设置存储库：ruyi config set repo.remote <url>
+		RuyiCommand.setRepoRemote(ruyiPath, repoUrls[0].getUrl() );
+		listener.logMessage("ruyi config set repo.remote successful. \n repo.remote is:"+RuyiCommand.getRepoRemote(ruyiPath));
+		
+		// 2.ruyi update：更新存储库软件包索引到本地
+		RuyiCommand.updateRuyi(ruyiPath);
+		listener.logMessage("ruyi update successful");
+		
+		// 3.遥测设置：ruyi telemetry consent/ ruyi telemetry optout 遥测开启/拒绝（数据已匿名化，建议开启）
+		RuyiCommand.setTelemetry(ruyiPath, telemetryStatus);
+		listener.logMessage("ruyi telemetry set successful:" + RuyiCommand.getTelemetryStatus(ruyiPath));
+		
+		listener.logMessage("Config successful");
+	}
+	
 
 	private void cleanFailedDownload(Path file, InstallationListener listener) {
 		try {
@@ -413,50 +349,55 @@ public class RuyiInstallManager {
 		}
 	}
 
-	private void updateProgress(long transferred, long total, InstallationListener listener) {
-		int percent = (int) ((double) transferred / total * 100);
-		listener.progressChanged(10 + percent / 2,
-				String.format("Downloading (%d/%d KB)", transferred / 1024, total / 1024));
-	}
-
 	// ========== 版本管理方法 ==========
 
-	public boolean isInstalled() throws Exception {
-		Path ruyiBin = Paths.get(installPath, "bin", "ruyi");
-		return RuyiFileUtils.isExecutable(ruyiBin.toString());
-	}
+//	public boolean isInstalled() throws Exception {
+//		Path ruyiBin = Paths.get(installPath, "bin", "ruyi");
+//		return RuyiFileUtils.isExecutable(ruyiBin.toString());
+//	}
+//
+//	public String getInstalledVersion() throws Exception {
+//		if (installedVersion != null) {
+//			return installedVersion;
+//		}
+//
+//		if (!isInstalled()) {
+//			return null;
+//		}
+//
+//		Path versionFile = Paths.get(installPath, "VERSION");
+//		if (Files.exists(versionFile)) {
+//			installedVersion = RuyiFileUtils.readFileContent(versionFile.toString()).trim();
+//			return installedVersion;
+//		}
+//		return "unknown";
+//	}
 
-	public String getInstalledVersion() throws Exception {
-		if (installedVersion != null) {
-			return installedVersion;
-		}
 
-		if (!isInstalled()) {
-			return null;
-		}
+//	public void setInstalledVersion(String version) {
+//		this.installedVersion = version;
+//	}
+//	public void setLatestRelease(RuyiReleaseInfo version) {
+//		this.latestRelease = version;
+//	}
+//	public void setLatestVersion(String version) {
+//		this.latestVersion = version;
+//	}
 
-		Path versionFile = Paths.get(installPath, "VERSION");
-		if (Files.exists(versionFile)) {
-			installedVersion = RuyiFileUtils.readFileContent(versionFile.toString()).trim();
-			return installedVersion;
-		}
-		return "unknown";
-	}
-
-	public String getLatestVersion() throws Exception {
-		if (latestVersion != null) {
-			return latestVersion;
-		}
-
-		String versionUrl = repositoryUrl + "/version/latest";
-		latestVersion = RuyiNetworkUtils.fetchStringContent(versionUrl, null);
-		return latestVersion;
-	}
-
-	public String getChangelog(String version) throws Exception {
-		String changelogUrl = repositoryUrl + "/changelog/" + version;
-		return RuyiNetworkUtils.fetchStringContent(changelogUrl, null);
-	}
+//	public String getLatestVersion() throws Exception {
+//		if (latestVersion != null) {
+//			return latestVersion;
+//		}
+//
+//		String versionUrl = repositoryUrl + "/version/latest";
+//		latestVersion = RuyiNetworkUtils.fetchStringContent(versionUrl, null);
+//		return latestVersion;
+//	}
+//
+//	public String getChangelog(String version) throws Exception {
+//		String changelogUrl = repositoryUrl + "/changelog/" + version;
+//		return RuyiNetworkUtils.fetchStringContent(changelogUrl, null);
+//	}
 
 	private String getVersionFromPackage() throws Exception {
 		// 从安装包中提取版本信息
@@ -485,9 +426,9 @@ public class RuyiInstallManager {
 		this.repoUrls = selectedRepoConfigs;
 	}
 
-	public String getRepositoryUrl() {
-		return repositoryUrl;
-	}
+//	public String getRepositoryUrl() {
+//		return repositoryUrl;
+//	}
 //    public void setRepositoryUrl(String repositoryType) {
 //        switch (repositoryType.toLowerCase()) {
 //            case "mirror":
@@ -503,12 +444,12 @@ public class RuyiInstallManager {
 //        }
 //    }
 
-	public void setTelemetryEnabled(boolean enabled) {
-		this.telemetryEnabled = enabled;
+	public void setTelemetryStatus(TelemetryStatus status) {
+		this.telemetryStatus = status;
 	}
 
-	public boolean isTelemetryEnabled() {
-		return telemetryEnabled;
+	public TelemetryStatus getTelemetryStatus() {
+		return telemetryStatus;
 	}
 
 	// ========== 辅助方法 ==========
@@ -519,11 +460,5 @@ public class RuyiInstallManager {
 		if (Files.exists(installDir)) {
 			RuyiFileUtils.deleteRecursively(installDir);
 		}
-	}
-
-	public boolean needsUpdate() throws Exception {
-		String installed = getInstalledVersion();
-		String latest = getLatestVersion();
-		return installed != null && latest != null && !installed.equals(latest);
 	}
 }

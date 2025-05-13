@@ -149,9 +149,9 @@ public class RepoConfigPreference {
 				RuyiProperties.setCustomMirrorChecked(f);
 
 				String text = customRepoText.getText();
-				if (f && text != null && !"".equals(text)) {
+//				if (f && text != null && !"".equals(text)) {
 					RuyiProperties.setCustomMirror(text.trim());
-				}
+//				}
 			} else {
 				System.out.println("repoCheckboxes text cannot be matched :" + repoCheckboxes[i].getText());
 			}
