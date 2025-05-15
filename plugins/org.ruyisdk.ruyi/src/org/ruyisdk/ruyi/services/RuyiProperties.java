@@ -15,6 +15,7 @@ import org.ruyisdk.core.config.Constants.AppInfo;
 import org.ruyisdk.core.config.Constants.ConfigFile;
 import org.ruyisdk.core.config.Constants.Ruyi;
 import org.ruyisdk.core.console.RuyiSDKConsole;
+import org.ruyisdk.ruyi.util.RuyiFileUtils;
 
 public class RuyiProperties {
 	private static final Path CONFIG_DIR = XDGDirs.getConfigDir(Constants.AppInfo.AppDir);
@@ -51,6 +52,8 @@ public class RuyiProperties {
         Properties defaults = new Properties();
         defaults.setProperty("automatic.detection", "on");
         defaults.setProperty("ruyi.telemetry.status", "on");
+        defaults.setProperty("ruyi.install.path", RuyiFileUtils.getDefaultInstallPath().toString());
+        defaults.setProperty("ruyi.mirror.custom", "");
         
         // 为package-index设置默认的选中状态
         defaults.setProperty("ruyi.mirror.iscas.checked", "1");
