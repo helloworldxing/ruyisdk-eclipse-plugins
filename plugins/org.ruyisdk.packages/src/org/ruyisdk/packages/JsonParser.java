@@ -35,46 +35,7 @@ public class JsonParser {
 
 
 
-    // private static void parseJsonObject(JsonObject rootObject, TreeNode root) {
-    //     // 跳过没有 category 或 name 的对象
-    //     if (!rootObject.containsKey("category") || !rootObject.containsKey("name")) {
-    //         return;
-    //     }
-    //     String category = rootObject.getString("category");
-    //     TreeNode categoryNode = findOrCreateCategoryNode(root, category);
-    
-    //     String name = rootObject.getString("name");
-    //     System.out.println("Package name: " + name);
-    //     TreeNode packageNode = new TreeNode(name, null);
-    //     categoryNode.addChild(packageNode);
-    
-    //     JsonArray versions = rootObject.getJsonArray("vers");
-    //     if (versions != null) {
-    //         for (JsonValue versionValue : versions) {
-    //             JsonObject versionObject = versionValue.asJsonObject();
-    //             // 跳过没有 semver 的对象
-    //             if (!versionObject.containsKey("semver")) {
-    //                 continue;
-    //             }
-    //             String semver = versionObject.getString("semver");
-    
-    //             JsonArray remarks = versionObject.getJsonArray("remarks");
-    //             String remark = (remarks != null && !remarks.isEmpty()) ? " [" + remarks.getString(0) + "]" : "";
-    
-    //             // 构造安装命令
-    //             String installCommand = "ruyi install '" + name + "(" + semver + ")'";
-    
-    //             TreeNode versionNode = new TreeNode(semver + remark, null, installCommand);
-    //             versionNode.setLeaf(true); // 标记为叶子节点
-    //             packageNode.addChild(versionNode);
-    //         }
-    //     }
-    // }
-
-
-
-
-        private static void parseJsonObject(JsonObject rootObject, TreeNode root) {
+    private static void parseJsonObject(JsonObject rootObject, TreeNode root) {
         // 跳过没有 category 或 name 的对象
         if (!rootObject.containsKey("category") || !rootObject.containsKey("name")) {
             return;
@@ -100,31 +61,70 @@ public class JsonParser {
                 JsonArray remarks = versionObject.getJsonArray("remarks");
                 String remark = (remarks != null && !remarks.isEmpty()) ? " [" + remarks.getString(0) + "]" : "";
     
-                // 新增：获取 distfiles 文件名
-                String distfileName = "";
-                if (versionObject.containsKey("pm")) {
-                    JsonObject pmObj = versionObject.getJsonObject("pm");
-                    if (pmObj.containsKey("distfiles")) {
-                        JsonArray distfiles = pmObj.getJsonArray("distfiles");
-                        if (distfiles != null && !distfiles.isEmpty()) {
-                            JsonObject distfileObj = distfiles.getJsonObject(0);
-                            if (distfileObj.containsKey("name")) {
-                                distfileName = " <" + distfileObj.getString("name") + ">";
-                            }
-                        }
-                    }
-                }
-    
                 // 构造安装命令
                 String installCommand = "ruyi install '" + name + "(" + semver + ")'";
     
-                // 拼接 semver、remark 和 distfileName
-                TreeNode versionNode = new TreeNode(semver + remark + distfileName, null, installCommand);
+                TreeNode versionNode = new TreeNode(semver + remark, null, installCommand);
                 versionNode.setLeaf(true); // 标记为叶子节点
                 packageNode.addChild(versionNode);
             }
         }
     }
+
+
+
+
+    //     private static void parseJsonObject(JsonObject rootObject, TreeNode root) {
+    //     // 跳过没有 category 或 name 的对象
+    //     if (!rootObject.containsKey("category") || !rootObject.containsKey("name")) {
+    //         return;
+    //     }
+    //     String category = rootObject.getString("category");
+    //     TreeNode categoryNode = findOrCreateCategoryNode(root, category);
+    
+    //     String name = rootObject.getString("name");
+    //     System.out.println("Package name: " + name);
+    //     TreeNode packageNode = new TreeNode(name, null);
+    //     categoryNode.addChild(packageNode);
+    
+    //     JsonArray versions = rootObject.getJsonArray("vers");
+    //     if (versions != null) {
+    //         for (JsonValue versionValue : versions) {
+    //             JsonObject versionObject = versionValue.asJsonObject();
+    //             // 跳过没有 semver 的对象
+    //             if (!versionObject.containsKey("semver")) {
+    //                 continue;
+    //             }
+    //             String semver = versionObject.getString("semver");
+    
+    //             JsonArray remarks = versionObject.getJsonArray("remarks");
+    //             String remark = (remarks != null && !remarks.isEmpty()) ? " [" + remarks.getString(0) + "]" : "";
+    
+    //             // 新增：获取 distfiles 文件名
+    //             String distfileName = "";
+    //             if (versionObject.containsKey("pm")) {
+    //                 JsonObject pmObj = versionObject.getJsonObject("pm");
+    //                 if (pmObj.containsKey("distfiles")) {
+    //                     JsonArray distfiles = pmObj.getJsonArray("distfiles");
+    //                     if (distfiles != null && !distfiles.isEmpty()) {
+    //                         JsonObject distfileObj = distfiles.getJsonObject(0);
+    //                         if (distfileObj.containsKey("name")) {
+    //                             distfileName = " <" + distfileObj.getString("name") + ">";
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    
+    //             // 构造安装命令
+    //             String installCommand = "ruyi install '" + name + "(" + semver + ")'";
+    
+    //             // 拼接 semver、remark 和 distfileName
+    //             TreeNode versionNode = new TreeNode(semver + remark + distfileName, null, installCommand);
+    //             versionNode.setLeaf(true); // 标记为叶子节点
+    //             packageNode.addChild(versionNode);
+    //         }
+    //     }
+    // }
 
 
 
