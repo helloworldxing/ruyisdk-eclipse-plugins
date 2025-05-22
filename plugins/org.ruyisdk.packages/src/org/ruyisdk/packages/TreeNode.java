@@ -10,6 +10,7 @@ public class TreeNode {
     private boolean selected; // 记录复选框是否选中
     private boolean isLeaf; // 标记是否为最末级节点
     private List<TreeNode> children;
+    private boolean downloaded = false;//下载标记字段
 
     public TreeNode(String name, String details) {
         this(name, details, null);
@@ -63,4 +64,6 @@ public class TreeNode {
     public boolean hasChildren() {
         return !children.isEmpty();
     }
+    public boolean isDownloaded() { return downloaded; }
+    public void setDownloaded(boolean downloaded) { this.downloaded = downloaded; }
 }

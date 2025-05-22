@@ -21,7 +21,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.part.ViewPart;
-
+import org.ruyisdk.packages.PackageExplorerView.OutputLiveDialog;
 import org.eclipse.jface.viewers.ICheckStateProvider;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
@@ -41,11 +41,12 @@ public class PackageExplorerView extends ViewPart {
 
     @Override
     public void createPartControl(Composite parent) {
+        
         parent.setLayout(new GridLayout(1, false));
-
+        
         // 创建按钮容器
         Composite buttonComposite = new Composite(parent, SWT.NONE);
-        buttonComposite.setLayout(new GridLayout(2, false));
+        buttonComposite.setLayout(new GridLayout(3, false));
         buttonComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
         // 添加刷新按钮
@@ -53,6 +54,25 @@ public class PackageExplorerView extends ViewPart {
         refreshButton.setText("刷新列表");
         refreshButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         refreshButton.addListener(SWT.Selection, event -> refreshList());
+
+        // 添加“打开下载目录”按钮
+        Button openDirButton = new Button(buttonComposite, SWT.PUSH);
+        openDirButton.setText("打开下载目录");
+        openDirButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        openDirButton.addListener(SWT.Selection, event -> {
+            try {
+                String cacheHome = System.getenv("XDG_CACHE_HOME");
+                String downloadDir;
+                if (cacheHome != null && !cacheHome.isEmpty()) {
+                    downloadDir = cacheHome + "/ruyi/distfiles";
+                } else {
+                    downloadDir = System.getProperty("user.home") + "/.cache/ruyi/distfiles";
+                }
+                Runtime.getRuntime().exec(new String[] { "xdg-open", downloadDir });
+            } catch (IOException e) {
+                MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "无法打开下载目录：" + e.getMessage());
+            }
+        });
 
         // 添加下载按钮
         Button downloadButton = new Button(buttonComposite, SWT.PUSH);
@@ -62,10 +82,10 @@ public class PackageExplorerView extends ViewPart {
             System.out.println("下载按钮被点击");
             Object[] checkedElements = viewer.getCheckedElements();
             List<TreeNode> selectedNodes = new ArrayList<>();
-            for (Object obj : checkedElements) {
+            for (Object obj : checkedElements) {//下载监听
                 if (obj instanceof TreeNode) {
                     TreeNode node = (TreeNode) obj;
-                    if (node.isLeaf()) {
+                    if (node.isLeaf()&&!node.isDownloaded()) {
                         selectedNodes.add(node);
                     }
                 }
@@ -131,6 +151,25 @@ public class PackageExplorerView extends ViewPart {
     });
     }
 
+    private java.util.Set<String> getDownloadedFiles() {
+    java.util.Set<String> files = new java.util.HashSet<>();
+    String cacheHome = System.getenv("XDG_CACHE_HOME");
+    String downloadDir;
+    if (cacheHome != null && !cacheHome.isEmpty()) {
+        downloadDir = cacheHome + "/ruyi/distfiles";
+    } else {
+        downloadDir = System.getProperty("user.home") + "/.cache/ruyi/distfiles";
+    }
+    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(downloadDir))) {
+        for (java.nio.file.Path entry : stream) {
+            files.add(entry.getFileName().toString());
+        }
+    } catch (Exception e) {
+        // 目录不存在或无权限时忽略
+    }
+    return files;
+}
+
     @Override
     public void setFocus() {
         viewer.getControl().setFocus();
@@ -190,16 +229,62 @@ public class PackageExplorerView extends ViewPart {
         }
     }
 
-    private void executeCommandInBackground(String command) {
+    // private void executeCommandInBackground(String command) {
+    //     new Thread(() -> {
+    //         try {
+    //             bashWriter.write(command + "\n");
+    //             bashWriter.flush();
+    //             System.out.println("执行命令: " + command);
+
+    //             StringBuilder outputBuilder = new StringBuilder();
+    //             String line;
+
+    //             outputBuilder.append("[");
+    //             while ((line = bashReader.readLine()) != null) {
+    //                 if (line.contains("RUYI_DONE")) {
+    //                     break;
+    //                 }
+    //                 if (!line.trim().isEmpty()) {
+    //                     outputBuilder.append(line).append(",");
+    //                 }
+    //             }
+
+    //             if (outputBuilder.length() > 1) {
+    //                 outputBuilder.setLength(outputBuilder.length() - 1);
+    //             }
+    //             outputBuilder.append("]");
+
+    //             String jsonData = outputBuilder.toString();
+    //             System.out.println("接收到的 JSON 数据: " + jsonData);
+
+    //             Display.getDefault().asyncExec(() -> {
+    //                 try {
+    //                     TreeNode root = JsonParser.parseJson(jsonData);
+    //                     viewer.setInput(root);
+    //                     viewer.expandAll();
+    //                 } catch (Exception e) {
+    //                     MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "解析 JSON 数据失败：" + e.getMessage());
+    //                 }
+    //             });
+    //         } catch (IOException e) {
+    //             e.printStackTrace();
+    //             Display.getDefault().asyncExec(() -> {
+    //                 MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "执行命令失败：" + e.getMessage());
+    //             });
+    //         }
+    //     }).start();
+    // }
+
+        private void executeCommandInBackground(String command) {
         new Thread(() -> {
             try {
                 bashWriter.write(command + "\n");
                 bashWriter.flush();
                 System.out.println("执行命令: " + command);
-
+    
                 StringBuilder outputBuilder = new StringBuilder();
                 String line;
-
+    
                 outputBuilder.append("[");
                 while ((line = bashReader.readLine()) != null) {
                     if (line.contains("RUYI_DONE")) {
@@ -209,20 +294,22 @@ public class PackageExplorerView extends ViewPart {
                         outputBuilder.append(line).append(",");
                     }
                 }
-
+    
                 if (outputBuilder.length() > 1) {
                     outputBuilder.setLength(outputBuilder.length() - 1);
                 }
                 outputBuilder.append("]");
-
+    
                 String jsonData = outputBuilder.toString();
                 System.out.println("接收到的 JSON 数据: " + jsonData);
-
+    
                 Display.getDefault().asyncExec(() -> {
                     try {
-                        TreeNode root = JsonParser.parseJson(jsonData);
+                        // 传入已下载文件列表
+                        TreeNode root = JsonParser.parseJson(jsonData, getDownloadedFiles());
                         viewer.setInput(root);
                         viewer.expandAll();
+                        markDownloadedNodes(root); // 标记已下载节点为选中且灰化
                     } catch (Exception e) {
                         MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "解析 JSON 数据失败：" + e.getMessage());
                     }
@@ -235,6 +322,28 @@ public class PackageExplorerView extends ViewPart {
             }
         }).start();
     }
+    
+    // 递归标记已下载节点
+    private void markDownloadedNodes(TreeNode node) {
+        if (node.isLeaf() && node.isDownloaded()) {
+            viewer.setChecked(node, true);
+            viewer.setGrayed(node, true);
+        }
+        if (node.getChildren() != null) {
+            for (TreeNode child : node.getChildren()) {
+                markDownloadedNodes(child);
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
     private void executeInstallCommand(String installCommand) {
         Display.getDefault().asyncExec(() -> {
             OutputLiveDialog dialog = new OutputLiveDialog(Display.getDefault().getActiveShell(), installCommand);
