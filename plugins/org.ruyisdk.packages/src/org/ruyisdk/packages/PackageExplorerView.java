@@ -46,7 +46,7 @@ public class PackageExplorerView extends ViewPart {
         
         // 创建按钮容器
         Composite buttonComposite = new Composite(parent, SWT.NONE);
-        buttonComposite.setLayout(new GridLayout(3, false));
+        buttonComposite.setLayout(new GridLayout(5, false));
         buttonComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
         // 添加刷新按钮
@@ -57,7 +57,7 @@ public class PackageExplorerView extends ViewPart {
 
         // 添加“打开下载目录”按钮
         Button openDirButton = new Button(buttonComposite, SWT.PUSH);
-        openDirButton.setText("打开下载目录");
+        openDirButton.setText("打开压缩包下载目录");
         openDirButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         openDirButton.addListener(SWT.Selection, event -> {
             try {
@@ -70,9 +70,54 @@ public class PackageExplorerView extends ViewPart {
                 }
                 Runtime.getRuntime().exec(new String[] { "xdg-open", downloadDir });
             } catch (IOException e) {
-                MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "无法打开下载目录：" + e.getMessage());
+                MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "无法打开压缩包下载目录：" + e.getMessage());
             }
         });
+
+                // 添加“打开二进制文件下载目录”按钮
+        Button openBinariesButton = new Button(buttonComposite, SWT.PUSH);
+        openBinariesButton.setText("打开二进制文件下载目录");
+        openBinariesButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        openBinariesButton.addListener(SWT.Selection, event -> {
+            try {
+                String dataHome = System.getenv("XDG_DATA_HOME");
+                String arch = System.getProperty("os.arch");
+                    if ("amd64".equals(arch)) {
+                        arch = "x86_64";
+                    }
+                String binariesDir;
+                if (dataHome != null && !dataHome.isEmpty()) {
+                    binariesDir = dataHome + "/ruyi/binaries/" + arch;
+                } else {
+                    binariesDir = System.getProperty("user.home") + "/.local/share/ruyi/binaries/" + arch;
+                    System.err.println(arch);
+                }
+                Runtime.getRuntime().exec(new String[] { "xdg-open", binariesDir });
+            } catch (IOException e) {
+                MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "无法打开二进制文件下载目录：" + e.getMessage());
+            }
+        });
+        
+        // 添加“打开镜像文件下载目录”按钮
+        Button openBlobsButton = new Button(buttonComposite, SWT.PUSH);
+        openBlobsButton.setText("打开镜像文件下载目录");
+        openBlobsButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        openBlobsButton.addListener(SWT.Selection, event -> {
+            try {
+                String dataHome = System.getenv("XDG_DATA_HOME");
+                String blobsDir;
+                if (dataHome != null && !dataHome.isEmpty()) {
+                    blobsDir = dataHome + "/ruyi/blobs";
+                } else {
+                    blobsDir = System.getProperty("user.home") + "/.local/share/ruyi/blobs";
+                }
+                Runtime.getRuntime().exec(new String[] { "xdg-open", blobsDir });
+            } catch (IOException e) {
+                MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "无法打开镜像文件下载目录：" + e.getMessage());
+            }
+        });
+
+        
 
         // 添加下载按钮
         Button downloadButton = new Button(buttonComposite, SWT.PUSH);
@@ -91,10 +136,10 @@ public class PackageExplorerView extends ViewPart {
                 }
             }
             if (selectedNodes.isEmpty()) {
-                MessageDialog.openInformation(Display.getDefault().getActiveShell(), "提示", "未选中任何节点！");
+                MessageDialog.openInformation(Display.getDefault().getActiveShell(), "提示", "未选中任何文件！");
                 return;
             }
-            boolean confirmed = MessageDialog.openConfirm(Display.getDefault().getActiveShell(), "确认下载", "是否确认下载选中的节点？");
+            boolean confirmed = MessageDialog.openConfirm(Display.getDefault().getActiveShell(), "确认下载", "是否确认下载选中的文件？");
             if (confirmed) {
                 for (TreeNode node : selectedNodes) {
                     executeInstallCommand(node.getInstallCommand());
@@ -138,7 +183,7 @@ public class PackageExplorerView extends ViewPart {
         // 弹出对话框让用户选择硬件类型
         String chosenType = showHardwareTypeSelectionDialog(parent.getShell());
         if (chosenType != null) {
-            String command = "ruyi --porcelain list --related-to-entity device:sipeed-" + chosenType + " && echo RUYI_DONE";
+            String command = "ruyi --porcelain list --related-to-entity device:sipeed-" + chosenType + " ; echo RUYI_DONE";
             executeCommandInBackground(command);
         }
         Display.getDefault().asyncExec(() -> {
@@ -151,24 +196,64 @@ public class PackageExplorerView extends ViewPart {
     });
     }
 
+//     private java.util.Set<String> getDownloadedFiles() {
+//     java.util.Set<String> files = new java.util.HashSet<>();
+//     String cacheHome = System.getenv("XDG_CACHE_HOME");
+//     String downloadDir;
+//     if (cacheHome != null && !cacheHome.isEmpty()) {
+//         downloadDir = cacheHome + "/ruyi/distfiles";
+//     } else {
+//         downloadDir = System.getProperty("user.home") + "/.cache/ruyi/distfiles";
+//     }
+//     try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(downloadDir))) {
+//         for (java.nio.file.Path entry : stream) {
+//             files.add(entry.getFileName().toString());
+//         }
+//     } catch (Exception e) {
+//         // 目录不存在或无权限时忽略
+//     }
+//     return files;
+// }
+
+
     private java.util.Set<String> getDownloadedFiles() {
-    java.util.Set<String> files = new java.util.HashSet<>();
-    String cacheHome = System.getenv("XDG_CACHE_HOME");
-    String downloadDir;
-    if (cacheHome != null && !cacheHome.isEmpty()) {
-        downloadDir = cacheHome + "/ruyi/distfiles";
-    } else {
-        downloadDir = System.getProperty("user.home") + "/.cache/ruyi/distfiles";
+        java.util.Set<String> files = new java.util.HashSet<>();
+
+        // distfiles
+        String cacheHome = System.getenv("XDG_CACHE_HOME");
+        String distfilesDir = (cacheHome != null && !cacheHome.isEmpty())
+                ? cacheHome + "/ruyi/distfiles"
+                : System.getProperty("user.home") + "/.cache/ruyi/distfiles";
+        addFilesFromDir(files, distfilesDir);
+
+        // binaries
+        String dataHome = System.getenv("XDG_DATA_HOME");
+        String arch = System.getProperty("os.arch");
+        String binariesDir = (dataHome != null && !dataHome.isEmpty())
+                ? dataHome + "/ruyi/binaries/" + arch
+                : System.getProperty("user.home") + "/.local/share/ruyi/binaries/" + arch;
+        addFilesFromDir(files, binariesDir);
+
+        // blobs
+        String blobsDir = (dataHome != null && !dataHome.isEmpty())
+                ? dataHome + "/ruyi/blobs"
+                : System.getProperty("user.home") + "/.local/share/ruyi/blobs";
+        addFilesFromDir(files, blobsDir);
+
+        return files;
     }
-    try (java.nio.file.DirectoryStream<java.nio.file.Path> stream = java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(downloadDir))) {
-        for (java.nio.file.Path entry : stream) {
-            files.add(entry.getFileName().toString());
+
+    // 辅助方法：将目录下所有文件名加入集合
+    private void addFilesFromDir(java.util.Set<String> files, String dirPath) {
+        try (java.nio.file.DirectoryStream<java.nio.file.Path> stream =
+                    java.nio.file.Files.newDirectoryStream(java.nio.file.Paths.get(dirPath))) {
+            for (java.nio.file.Path entry : stream) {
+                files.add(entry.getFileName().toString());
+            }
+        } catch (Exception e) {
+            // 目录不存在或无权限时忽略
         }
-    } catch (Exception e) {
-        // 目录不存在或无权限时忽略
     }
-    return files;
-}
 
     @Override
     public void setFocus() {
@@ -229,39 +314,121 @@ public class PackageExplorerView extends ViewPart {
         }
     }
 
-    // private void executeCommandInBackground(String command) {
+    private void executeCommandInBackground(String command) {
+        new Thread(() -> {
+            try {
+                List<String> cmdList = new ArrayList<>();
+                cmdList.add("bash");
+                cmdList.add("-c");
+                cmdList.add(command);
+
+                ProcessBuilder pb = new ProcessBuilder(cmdList);
+                pb.environment().put("RUYI_EXPERIMENTAL", "true");
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                StringBuilder outputBuilder = new StringBuilder();
+                outputBuilder.append("[");
+                boolean first = true;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("RUYI_DONE")) {
+                        break;
+                    }
+                    line = line.trim();
+                    // 只拼接包数据，过滤日志
+                    if (!line.isEmpty() && line.startsWith("{") && !line.contains("\"ty\":\"log-v1\"")) {
+                        if (!first) {
+                            outputBuilder.append(",");
+                        }
+                        outputBuilder.append(line);
+                        first = false;
+                    }
+                }
+                outputBuilder.append("]");
+                String jsonData = outputBuilder.toString();
+
+                process.waitFor();
+                reader.close();
+
+                System.out.println("接收到的 JSON 数据: " + jsonData);
+
+                Display.getDefault().asyncExec(() -> {
+                    try {
+                        TreeNode root = JsonParser.parseJson(jsonData, getDownloadedFiles());
+                        viewer.setInput(root);
+                        viewer.expandAll();
+                        markDownloadedNodes(root);
+                    } catch (Exception e) {
+                        MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "解析 JSON 数据失败：" + e.getMessage());
+                    }
+                });
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                Display.getDefault().asyncExec(() -> {
+                    MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "执行命令失败：" + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    //     private void executeCommandInBackground(String command) {
     //     new Thread(() -> {
     //         try {
     //             bashWriter.write(command + "\n");
     //             bashWriter.flush();
     //             System.out.println("执行命令: " + command);
-
+    
     //             StringBuilder outputBuilder = new StringBuilder();
     //             String line;
+    
+    //             // outputBuilder.append("[");
+    //             // while ((line = bashReader.readLine()) != null) {
+    //             //     if (line.contains("RUYI_DONE")) {
+    //             //         break;
+    //             //     }
+    //             //     if (!line.trim().isEmpty()) {
+    //             //         outputBuilder.append(line).append(",");
+    //             //     }
+    //             // }
+    
+    //             // if (outputBuilder.length() > 1) {
+    //             //     outputBuilder.setLength(outputBuilder.length() - 1);
+    //             // }
+    //             // outputBuilder.append("]");
+    
+    //             // String jsonData = outputBuilder.toString();
+
 
     //             outputBuilder.append("[");
+    //             boolean first = true;
     //             while ((line = bashReader.readLine()) != null) {
     //                 if (line.contains("RUYI_DONE")) {
     //                     break;
     //                 }
-    //                 if (!line.trim().isEmpty()) {
-    //                     outputBuilder.append(line).append(",");
+    //                 line = line.trim();
+    //                 if (!line.isEmpty()) {
+    //                     if (!first) {
+    //                         outputBuilder.append(",");
+    //                     }
+    //                     outputBuilder.append(line);
+    //                     first = false;
     //                 }
     //             }
-
-    //             if (outputBuilder.length() > 1) {
-    //                 outputBuilder.setLength(outputBuilder.length() - 1);
-    //             }
     //             outputBuilder.append("]");
-
     //             String jsonData = outputBuilder.toString();
-    //             System.out.println("接收到的 JSON 数据: " + jsonData);
 
+
+    //             System.out.println("接收到的 JSON 数据: " + jsonData);
+    
     //             Display.getDefault().asyncExec(() -> {
     //                 try {
-    //                     TreeNode root = JsonParser.parseJson(jsonData);
+    //                     // 传入已下载文件列表
+    //                     TreeNode root = JsonParser.parseJson(jsonData, getDownloadedFiles());
     //                     viewer.setInput(root);
     //                     viewer.expandAll();
+    //                     markDownloadedNodes(root); // 标记已下载节点为选中且灰化
     //                 } catch (Exception e) {
     //                     MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "解析 JSON 数据失败：" + e.getMessage());
     //                 }
@@ -274,54 +441,6 @@ public class PackageExplorerView extends ViewPart {
     //         }
     //     }).start();
     // }
-
-        private void executeCommandInBackground(String command) {
-        new Thread(() -> {
-            try {
-                bashWriter.write(command + "\n");
-                bashWriter.flush();
-                System.out.println("执行命令: " + command);
-    
-                StringBuilder outputBuilder = new StringBuilder();
-                String line;
-    
-                outputBuilder.append("[");
-                while ((line = bashReader.readLine()) != null) {
-                    if (line.contains("RUYI_DONE")) {
-                        break;
-                    }
-                    if (!line.trim().isEmpty()) {
-                        outputBuilder.append(line).append(",");
-                    }
-                }
-    
-                if (outputBuilder.length() > 1) {
-                    outputBuilder.setLength(outputBuilder.length() - 1);
-                }
-                outputBuilder.append("]");
-    
-                String jsonData = outputBuilder.toString();
-                System.out.println("接收到的 JSON 数据: " + jsonData);
-    
-                Display.getDefault().asyncExec(() -> {
-                    try {
-                        // 传入已下载文件列表
-                        TreeNode root = JsonParser.parseJson(jsonData, getDownloadedFiles());
-                        viewer.setInput(root);
-                        viewer.expandAll();
-                        markDownloadedNodes(root); // 标记已下载节点为选中且灰化
-                    } catch (Exception e) {
-                        MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "解析 JSON 数据失败：" + e.getMessage());
-                    }
-                });
-            } catch (IOException e) {
-                e.printStackTrace();
-                Display.getDefault().asyncExec(() -> {
-                    MessageDialog.openError(Display.getDefault().getActiveShell(), "错误", "执行命令失败：" + e.getMessage());
-                });
-            }
-        }).start();
-    }
     
     // 递归标记已下载节点
     private void markDownloadedNodes(TreeNode node) {
@@ -372,14 +491,61 @@ public class PackageExplorerView extends ViewPart {
             return container;
         }
     
+        // private void startCommand() {
+        //     new Thread(() -> {
+        //         try {
+        //             bashWriter.write(installCommand + "\n");
+        //             bashWriter.flush();
+    
+        //             String line;
+        //             while ((line = bashReader.readLine()) != null) {
+        //                 final String outputLine = line + "\n";
+        //                 Display.getDefault().asyncExec(() -> {
+        //                     if (text != null && !text.isDisposed()) {
+        //                         text.append(outputLine);
+        //                     }
+        //                 });
+        //                 if (line.contains("RUYI_DONE")) {
+
+        //                     break;
+        //                 }
+        //             }
+        //         } catch (IOException e) {
+        //             Display.getDefault().asyncExec(() -> {
+        //                 if (text != null && !text.isDisposed()) {
+        //                     text.append("执行安装命令失败：" + e.getMessage() + "\n");
+        //                 }
+        //             });
+        //         }
+        //     }).start();
+        // }
+
+
         private void startCommand() {
             new Thread(() -> {
                 try {
-                    bashWriter.write(installCommand + "\n");
-                    bashWriter.flush();
-    
+                    List<String> cmdList = new ArrayList<>();
+                    cmdList.add("bash");
+                    cmdList.add("-c");
+                    // 直接执行 installCommand，不加实验模式
+                    cmdList.add(installCommand + " && echo RUYI_DONE");
+        
+                    ProcessBuilder pb = new ProcessBuilder(cmdList);
+                    pb.redirectErrorStream(true);
+        
+                    // 保证 HOME 和 XDG_CACHE_HOME 环境变量一致
+                    String home = System.getProperty("user.home");
+                    pb.environment().put("HOME", home);
+                    String xdgCacheHome = System.getenv("XDG_CACHE_HOME");
+                    if (xdgCacheHome != null && !xdgCacheHome.isEmpty()) {
+                        pb.environment().put("XDG_CACHE_HOME", xdgCacheHome);
+                    }
+        
+                    Process process = pb.start();
+        
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                     String line;
-                    while ((line = bashReader.readLine()) != null) {
+                    while ((line = reader.readLine()) != null) {
                         final String outputLine = line + "\n";
                         Display.getDefault().asyncExec(() -> {
                             if (text != null && !text.isDisposed()) {
@@ -387,10 +553,13 @@ public class PackageExplorerView extends ViewPart {
                             }
                         });
                         if (line.contains("RUYI_DONE")) {
+                            Display.getDefault().asyncExec(() -> refreshList());
                             break;
                         }
                     }
-                } catch (IOException e) {
+                    reader.close();
+                    process.waitFor();
+                } catch (IOException | InterruptedException e) {
                     Display.getDefault().asyncExec(() -> {
                         if (text != null && !text.isDisposed()) {
                             text.append("执行安装命令失败：" + e.getMessage() + "\n");
@@ -427,6 +596,8 @@ class OutputDialog extends Dialog {
         return new org.eclipse.swt.graphics.Point(600, 400);
     }
 }
+
+
 
     private void refreshList() {
         System.out.println("开始刷新列表...");
