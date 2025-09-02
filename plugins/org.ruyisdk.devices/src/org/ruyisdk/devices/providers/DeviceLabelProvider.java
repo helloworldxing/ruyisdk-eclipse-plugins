@@ -8,14 +8,20 @@ import org.ruyisdk.devices.model.Device;
 public class DeviceLabelProvider extends LabelProvider implements ITableLabelProvider {
     @Override
     public String getColumnText(Object element, int columnIndex) {
-    	Device device = (Device) element;
+        Device device = (Device) element;
         switch (columnIndex) {
-            case 0: return device.getName();
-            case 1: return device.getChip();
-            case 2: return device.getVendor();
-            case 3: return device.getVersion();
-            case 4: return device.isDefault() ? "Default" : "";
-            default: return "";
+            case 0:
+                return device.getName();
+            case 1:
+                return device.getChip();
+            case 2:
+                return device.getVendor();
+            case 3:
+                return device.getVersion();
+            case 4:
+                return device.isDefault() ? "Default" : "";
+            default:
+                return "";
         }
     }
 

@@ -92,7 +92,7 @@ public class PropertiesService {
 			e.printStackTrace();
 			
 			RuyiSdkConsole.getInstance().logError("Devices storage failure!");
-		} 
-	}
+        }
+    }
 }
 
