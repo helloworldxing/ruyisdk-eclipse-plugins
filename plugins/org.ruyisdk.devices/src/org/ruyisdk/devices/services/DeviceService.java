@@ -5,11 +5,11 @@ import java.util.List;
 import org.ruyisdk.devices.model.Device;
 
 public class DeviceService {
-	private List<Device> devices = new ArrayList<>();
+    private List<Device> devices = new ArrayList<>();
     private PropertiesService propertiesService = new PropertiesService();
 
     public DeviceService() {
-    	devices = propertiesService.loadDevices();
+        devices = propertiesService.loadDevices();
     }
 
     public List<Device> getDevices() {
@@ -17,18 +17,18 @@ public class DeviceService {
     }
 
     public void addDevice(Device device) {
-    	devices.add(device);
+        devices.add(device);
     }
 
     public void updateDevice(Device oldDevice, Device newDevice) {
         int index = devices.indexOf(oldDevice);
         if (index != -1) {
-        	devices.set(index, newDevice);
+            devices.set(index, newDevice);
         }
     }
 
     public void deleteDevice(Device device) {
-    	devices.remove(device);
+        devices.remove(device);
     }
 
     public void setDefaultDevice(Device device) {
