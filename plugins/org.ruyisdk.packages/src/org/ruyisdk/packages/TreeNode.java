@@ -64,6 +64,12 @@ public class TreeNode {
     public boolean hasChildren() {
         return !children.isEmpty();
     }
-    public boolean isDownloaded() { return downloaded; }
-    public void setDownloaded(boolean downloaded) { this.downloaded = downloaded; }
+
+    public boolean isDownloaded() {
+        return downloaded;
+    }
+
+    public void setDownloaded(boolean downloaded) {
+        this.downloaded = downloaded;
+    }
 }
